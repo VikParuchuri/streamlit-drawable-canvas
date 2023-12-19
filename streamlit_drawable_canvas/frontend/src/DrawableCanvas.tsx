@@ -124,11 +124,28 @@ const DrawableCanvas = ({ args }: ComponentProps) => {
   useEffect(() => {
     if (backgroundImageURL) {
       var bgImage = new Image();
+      var retryCount = 0;
+      const maxRetries = 3;
+      const baseUrl = getStreamlitBaseUrl() ?? "";
+      
       bgImage.onload = function() {
-        backgroundCanvas.getContext().drawImage(bgImage, 0, 0);
+          backgroundCanvas.getContext().drawImage(bgImage, 0, 0);
       };
-      const baseUrl = getStreamlitBaseUrl() ?? ""
-      bgImage.src = baseUrl + backgroundImageURL
+      
+      bgImage.onerror = function() {
+          if (retryCount < maxRetries) {
+              retryCount++;
+              console.log("Retry loading image, attempt: " + retryCount);
+              setTimeout(() => {
+                  // Update the src to trigger a reload
+                  bgImage.src = baseUrl + backgroundImageURL + "?retry=" + retryCount;
+              }, retryCount * 1000); // Wait 1 second for the first retry, 2 seconds for the second
+          } else {
+              console.error("Failed to load the image after " + maxRetries + " retries.");
+          }
+      };
+
+      bgImage.src = baseUrl + backgroundImageURL;
     }
   }, [
     canvas,
